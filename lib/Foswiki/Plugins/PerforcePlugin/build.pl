@@ -22,11 +22,11 @@ BEGIN {
     unshift @INC, split( /:/, $ENV{FOSWIKI_LIBS} );
 }
 
-use TWiki::Contrib::Build;
+use Foswiki::Contrib::Build;
 
 # Declare our build package
 package BuildBuild;
-use base qw( TWiki::Contrib::Build );
+use base qw( Foswiki::Contrib::Build );
 
 sub new {
     my $class = shift;

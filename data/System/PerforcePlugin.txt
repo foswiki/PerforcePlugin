@@ -142,11 +142,11 @@ __Note:__ You do not need to install anything on the browser to use this plug-in
    * Download the ZIP file from the Plug-in Home (see below) 
    * Unzip ==%TOPIC%.zip== in your twiki installation directory. Content: 
 | *File:* | *Description:* |
-| ==data/TWiki/%TOPIC%.txt== | Plug-in topic |
+| ==data/System/%TOPIC%.txt== | Plug-in topic |
 | ==data/Sandbox/PluginTest%TOPIC%.txt== | Plug-in examples |
 | ==lib/Foswiki/Plugins/%TOPIC%.pm== | Plug-in Perl module |
    * Configure the Plug-in: 
-      * TWiki 4.0 and up: Run the [[%SCRIPTURL%/configure%SCRIPTSUFFIX%][configure]] script to enable the Plug-in 
+      * Run the [[%SCRIPTURL%/configure%SCRIPTSUFFIX%][configure]] script to enable the Plug-in 
       * Change the Plug-in settings as needed 
       * Edit =/lib/LocalSite.cfg= and define the following values according to your Perforce environment: 
 
