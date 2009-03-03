@@ -184,10 +184,8 @@ NOTE: It turns out that you don't even need to specify an existing =p4client= to
 |  CPAN Dependencies: | none |
 |  Other Dependencies: | [[http://www.perforce.com][Perforce]] command line =p4.exe= <br /> Foswiki:Extensions.JQueryPlugin or Foswiki:Extensions.JQueryDevPlugin optional. Only for AJAX functionality |
 |  Perl Version: | 5.005 |
-|  [[Foswiki:Extensions/Benchmark][Benchmarks]]: | %SYSTEMWEB%.GoodStyle nn%, %SYSTEMWEB%.FormattedSearch nn%, %TOPIC% nn% |
 |  Plug-in Home: | http://foswiki.org/Extensions/%TOPIC% |
 |  Feedback: | http://foswiki.org/Extensions/%TOPIC%Dev |
-|  Appraisal: | http://foswiki.org/Extensions/%TOPIC%Appraisal |
 
 __Related Topics:__ [[%SYSTEMWEB%.Plugins][Plugins]], %SYSTEMWEB%.DeveloperDocumentationCategory, %SYSTEMWEB%.AdminDocumentationCategory, %SYSTEMWEB%.DefaultPreferences, %USERSWEB%.SitePreferences
 
