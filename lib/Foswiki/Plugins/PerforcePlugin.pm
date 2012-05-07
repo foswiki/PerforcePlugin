@@ -68,13 +68,12 @@ package Foswiki::Plugins::PerforcePlugin;
 # Always use strict to enforce variable scoping
 use strict;
 
-require Foswiki::Func;       # The plugins API
-require Foswiki::Plugins;    # For the API version
+require Foswiki::Func;    # The plugins API
+require Foswiki::Plugins; # For the API version
 
 # $VERSION is referred to by TWiki, and is the only global variable that
 # *must* exist in this package.
-use vars
-  qw( $VERSION $RELEASE $SHORTDESCRIPTION $debug $pluginName $NO_PREFS_IN_TOPIC $p4port $p4client $p4user $p4password);
+use vars qw( $VERSION $RELEASE $SHORTDESCRIPTION $debug $pluginName $NO_PREFS_IN_TOPIC $p4port $p4client $p4user $p4password);
 
 # This should always be $Rev$ so that TWiki can determine the checked-in
 # status of the plugin. It is used by the build automation tools, so
@@ -88,8 +87,7 @@ $RELEASE = '0.8';
 
 # Short description of this plugin
 # One line description, is shown in the %SYSTEMWEB%.TextFormattingRules topic:
-$SHORTDESCRIPTION =
-  'PerforcePlugin allows you to perform operation on a remote Perforce server';
+$SHORTDESCRIPTION = 'PerforcePlugin allows you to perform operation on a remote Perforce server';
 
 # You must set $NO_PREFS_IN_TOPIC to 0 if you want your plugin to use preferences
 # stored in the plugin topic. This default is required for compatibility with
@@ -109,6 +107,7 @@ $pluginName = 'PerforcePlugin';
 #eval "require Foswiki:Extensions:OtherPlugin"; if $@ { print STDERR "Not installed" }
 #if ($Foswiki::cfg{Plugins}{OtherPlugin}{Enabled}) { print STDERR "it's enabled" }
 #
+
 
 =pod
 
@@ -143,12 +142,11 @@ FOOBARSOMETHING. This avoids namespace issues.
 =cut
 
 sub initPlugin {
-    my ( $topic, $web, $user, $installWeb ) = @_;
+    my( $topic, $web, $user, $installWeb ) = @_;
 
     # check for Plugins.pm versions
-    if ( $Foswiki::Plugins::VERSION < 1.026 ) {
-        Foswiki::Func::writeWarning(
-            "Version mismatch between $pluginName and Plugins.pm");
+    if( $Foswiki::Plugins::VERSION < 1.026 ) {
+        Foswiki::Func::writeWarning( "Version mismatch between $pluginName and Plugins.pm" );
         return 0;
     }
 
@@ -162,34 +160,29 @@ sub initPlugin {
     # configuration to the =configure= interface.
     my $setting = $Foswiki::cfg{Plugins}{PerforcePlugin}{ExampleSetting} || 0;
     $debug = $Foswiki::cfg{Plugins}{PerforcePlugin}{Debug} || 0;
-
-    $p4port     = $Foswiki::cfg{Plugins}{PerforcePlugin}{p4port}     || undef;
-    $p4client   = $Foswiki::cfg{Plugins}{PerforcePlugin}{p4client}   || undef;
-    $p4user     = $Foswiki::cfg{Plugins}{PerforcePlugin}{p4user}     || undef;
-    $p4password = $Foswiki::cfg{Plugins}{PerforcePlugin}{p4password} || undef;
-
-    unless ( defined($p4password)
-        && defined($p4port)
-        && defined($p4client)
-        && defined($p4user) )
-    {
-        Foswiki::Func::writeWarning(
-"{Plugins}{PerforcePlugin}{p4port}, {Plugins}{PerforcePlugin}{p4client}, {Plugins}{PerforcePlugin}{p4user} and {Plugins}{PerforcePlugin}{p4password} must be defined in LocalSite.cfg\n"
-        );
-        return 0;
-    }
-
+    
+    $p4port = $Foswiki::cfg{Plugins}{PerforcePlugin}{p4port} || undef;
+	$p4client = $Foswiki::cfg{Plugins}{PerforcePlugin}{p4client} || undef;
+	$p4user = $Foswiki::cfg{Plugins}{PerforcePlugin}{p4user} || undef;
+	$p4password = $Foswiki::cfg{Plugins}{PerforcePlugin}{p4password} || undef;
+    
+	unless (defined($p4password) && defined($p4port) && defined($p4client) && defined($p4user) )
+		{
+		Foswiki::Func::writeWarning("{Plugins}{PerforcePlugin}{p4port}, {Plugins}{PerforcePlugin}{p4client}, {Plugins}{PerforcePlugin}{p4user} and {Plugins}{PerforcePlugin}{p4password} must be defined in LocalSite.cfg\n");	
+		return 0;
+		}
+	
     # register the _EXAMPLETAG function to handle %EXAMPLETAG{...}%
     # This will be called whenever %EXAMPLETAG% or %EXAMPLETAG{...}% is
     # seen in the topic text.
-    Foswiki::Func::registerTagHandler( 'P4CHANGES',   \&_P4CHANGES );
+    Foswiki::Func::registerTagHandler( 'P4CHANGES', \&_P4CHANGES );
     Foswiki::Func::registerTagHandler( 'P4CHANGESPI', \&_P4CHANGESPI );
-
-    # Allow a sub to be called from the REST interface
+    
+    # Allow a sub to be called from the REST interface 
     # using the provided alias
     #TODO: use rest interface for ajax support
-    Foswiki::Func::registerRESTHandler( 'p4changes',   \&restP4CHANGES );
-    Foswiki::Func::registerRESTHandler( 'p4changespi', \&restP4CHANGESPI );
+    Foswiki::Func::registerRESTHandler('p4changes', \&restP4CHANGES);
+    Foswiki::Func::registerRESTHandler('p4changespi', \&restP4CHANGESPI);
 
     # Plugin correctly initialized
     return 1;
@@ -204,69 +197,69 @@ TWiki TAG specific functionality.
 
 =cut
 
-sub _P4CHANGES {
-    my ( $session, $params, $theTopic, $theWeb ) = @_;
+sub _P4CHANGES
+	{
+    my($session, $params, $theTopic, $theWeb) = @_;   
+    
+    my $ajax=$params->{ajax};
+    my $label=$params->{label};
+    $label='Fetch perforce changes' unless defined($label);
+    my $format=$params->{format};
+    my $default=$params->{_DEFAULT};
+    my $footer=$params->{footer};
+    my $header=$params->{header};    
+    my $method=$params->{method} || 'POST';    
+        
+    #If asked for ajax services we don't run the actual p4 command now 	    
+    if (defined $ajax)
+    	{
+		#Resolving some substitutions for header and footer here implies it will be done twice since it will be done again in P4Changes sub through the rest interface
+		#However we must resolve things like the $quot to allow HTML and JS in footer for instance
+		#TODO: Can't get the footer and header param to work properly with ajax
+    	#if (defined $header)
+		#	{
+		#	$header=EarlyVariableSubstitution($header);			
+		#	}
+		
+		#	
+		#if (defined $footer)
+			#{
+			#die "FOOTER: $footer";	
+			#$footer=EarlyVariableSubstitution($footer);
+			##$footer=UrlEncode($footer);					
+			#}		    	
+	    
+		#die "FOOTER: $footer";	
 
-    my $ajax  = $params->{ajax};
-    my $label = $params->{label};
-    $label = 'Fetch perforce changes' unless defined($label);
-    my $format  = $params->{format};
-    my $default = $params->{_DEFAULT};
-    my $footer  = $params->{footer};
-    my $header  = $params->{header};
-    my $method  = $params->{method} || 'POST';
-
-    #If asked for ajax services we don't run the actual p4 command now
-    if ( defined $ajax ) {
-
-#Resolving some substitutions for header and footer here implies it will be done twice since it will be done again in P4Changes sub through the rest interface
-#However we must resolve things like the $quot to allow HTML and JS in footer for instance
-#TODO: Can't get the footer and header param to work properly with ajax
-#if (defined $header)
-#	{
-#	$header=EarlyVariableSubstitution($header);
-#	}
-
-        #
-        #if (defined $footer)
-        #{
-        #die "FOOTER: $footer";
-        #$footer=EarlyVariableSubstitution($footer);
-        ##$footer=UrlEncode($footer);
-        #}
-
-        #die "FOOTER: $footer";
-
-        my $output = "";
-
-        if ( $method eq 'GET' ) {
-
-            #URL encode the URL parameters
-            $default = Foswiki::urlEncode($default);
-            $format  = Foswiki::urlEncode($format);
-            $footer  = Foswiki::urlEncode($footer);
-            $header  = Foswiki::urlEncode($header);
-
-            $output =
-"<input type=\"button\" value=\"$label\" onclick=\"\$('#$ajax').load('%SCRIPTURLPATH%/rest/PerforcePlugin/p4changes?header=$header&footer=$footer&topic=%WEB%.%TOPIC%&_DEFAULT=$default&format=$format', {}, function(){\$('#$ajax').show('slow');})\"/><div style=\"display: none\" id=\"$ajax\"></div>";
-        }
-        else {
-
-            #By default use POST
-            my $jsHash =
-"{ topic:'%WEB%.%TOPIC%' , _DEFAULT: '$default' , format: '$format', header: '$header' , footer: '$footer' }";
-
-            $output =
-"<input type=\"button\" value=\"$label\" onclick=\"\$('#$ajax').load('%SCRIPTURLPATH%/rest/PerforcePlugin/p4changes', $jsHash, function(){\$('#$ajax').show('slow');})\"/><div style=\"display: none\" id=\"$ajax\"></div>";
-        }
-
-        #die $output;
-        return "$output";
+		my $output="";
+				
+		if ($method eq 'GET')
+			{
+		
+			#URL encode the URL parameters
+			$default=Foswiki::urlEncode($default);
+			$format=Foswiki::urlEncode($format);
+			$footer=Foswiki::urlEncode($footer);
+			$header=Foswiki::urlEncode($header);
+			
+			$output="<input type=\"button\" value=\"$label\" onclick=\"\$('#$ajax').load('%SCRIPTURLPATH%/rest/PerforcePlugin/p4changes?header=$header&footer=$footer&topic=%WEB%.%TOPIC%&_DEFAULT=$default&format=$format', {}, function(){\$('#$ajax').show('slow');})\"/><div style=\"display: none\" id=\"$ajax\"></div>";			
+			}
+		else
+			{							    	
+	    	#By default use POST
+	    	my $jsHash="{ topic:'%WEB%.%TOPIC%' , _DEFAULT: '$default' , format: '$format', header: '$header' , footer: '$footer' }";
+						
+			$output="<input type=\"button\" value=\"$label\" onclick=\"\$('#$ajax').load('%SCRIPTURLPATH%/rest/PerforcePlugin/p4changes', $jsHash, function(){\$('#$ajax').show('slow');})\"/><div style=\"display: none\" id=\"$ajax\"></div>";				
+    		}
+    		
+	   	#die $output;	    		
+	   	return "$output";
+    	}
+    
+    return handleP4Changes(@_);    
     }
-
-    return handleP4Changes(@_);
-}
-
+    
+    
 =pod
 
 ---++ restP4CHANGES($session) -> $text
@@ -282,29 +275,31 @@ For more information, check %SYSTEMWEB%.CommandAndCGIScripts#rest
 
 =cut
 
-sub restP4CHANGES {
-    my ($session) = @_;
-    my $query = Foswiki::Func::getCgiQuery();
 
-    my %params;
+sub restP4CHANGES 
+	{
+   	my ($session) = @_;   
+   	my $query = Foswiki::Func::getCgiQuery();
+   	
+   	my %params;
+   	
+   	$params{'_DEFAULT'}=$query->param('_DEFAULT');
+   	$params{'format'}=$query->param('format');   	
+	$params{'footer'}=$query->param('footer');
+   	$params{'header'}=$query->param('header');   	
+    
+   	#return "This is an example of a REST invocation\n\n";   	
+   	#return "$params{'_DEFAULT'}\n$params{'format'}\n\n";
+   	
+   	my $output=handleP4Changes($session,\%params);
+   	
+   	$output=Foswiki::Func::expandCommonVariables($output);  
+   	$output=Foswiki::Func::renderText($output);
+   	
+   	return "$output\n\n";	   		
+	#return "This is an example of a REST invocation\n\n";
+	}	
 
-    $params{'_DEFAULT'} = $query->param('_DEFAULT');
-    $params{'format'}   = $query->param('format');
-    $params{'footer'}   = $query->param('footer');
-    $params{'header'}   = $query->param('header');
-
-    #return "This is an example of a REST invocation\n\n";
-    #return "$params{'_DEFAULT'}\n$params{'format'}\n\n";
-
-    my $output = handleP4Changes( $session, \%params );
-
-    $output = Foswiki::Func::expandCommonVariables($output);
-    $output = Foswiki::Func::renderText($output);
-
-    return "$output\n\n";
-
-    #return "This is an example of a REST invocation\n\n";
-}
 
 =pod
 
@@ -312,217 +307,230 @@ Gather changes pending for integration from the given branch specification
 
 =cut
 
-sub _P4CHANGESPI {
-    my ( $session, $params, $theTopic, $theWeb ) = @_;
+sub _P4CHANGESPI
+	{
+    my($session, $params, $theTopic, $theWeb) = @_;   
+    
+    my $ajax=$params->{ajax};
+    my $label=$params->{label};
+    $label='Fetch perforce changes' unless defined($label);
+    my $format=$params->{format};
+    my $default=$params->{_DEFAULT};
+    my $footer=$params->{footer};
+    my $header=$params->{header};    
+    my $reverse=$params->{reverse};
+    my $description=$params->{description};
+    my $method=$params->{method} || 'POST';    
+        
+    #If asked for ajax services we don't run the actual p4 command now 	    
+    if (defined $ajax)
+    	{
+		my $output="";
+				
+		if ($method eq 'GET')
+			{
+		
+			#URL encode the URL parameters
+			$default=Foswiki::urlEncode($default);
+			$format=Foswiki::urlEncode($format);
+			$footer=Foswiki::urlEncode($footer);
+			$header=Foswiki::urlEncode($header);
+			
+			$output="<input type=\"button\" value=\"$label\" onclick=\"\$('#$ajax').load('%SCRIPTURLPATH%/rest/PerforcePlugin/p4changespi?reverse=$reverse&description=$description&header=$header&footer=$footer&topic=%WEB%.%TOPIC%&_DEFAULT=$default&format=$format', {}, function(){\$('#$ajax').show('slow');})\"/><div style=\"display: none\" id=\"$ajax\"></div>";			
+			}
+		else
+			{							    	
+	    	#By default use POST
+	    	my $jsHash="{ topic:'%WEB%.%TOPIC%' , _DEFAULT: '$default' , format: '$format', header: '$header' , footer: '$footer', description: '$description', reverse: '$reverse' }";
+						
+			$output="<input type=\"button\" value=\"$label\" onclick=\"\$('#$ajax').load('%SCRIPTURLPATH%/rest/PerforcePlugin/p4changespi', $jsHash, function(){\$('#$ajax').show('slow');})\"/><div style=\"display: none\" id=\"$ajax\"></div>";				
+    		}
+    		
+	   	#die $output;	    		
+	   	return "$output";
+    	}
+    
+    return handleP4ChangesPendingIntegration(@_);    		
+	}
 
-    my $ajax  = $params->{ajax};
-    my $label = $params->{label};
-    $label = 'Fetch perforce changes' unless defined($label);
-    my $format      = $params->{format};
-    my $default     = $params->{_DEFAULT};
-    my $footer      = $params->{footer};
-    my $header      = $params->{header};
-    my $reverse     = $params->{reverse};
-    my $description = $params->{description};
-    my $method      = $params->{method} || 'POST';
-
-    #If asked for ajax services we don't run the actual p4 command now
-    if ( defined $ajax ) {
-        my $output = "";
-
-        if ( $method eq 'GET' ) {
-
-            #URL encode the URL parameters
-            $default = Foswiki::urlEncode($default);
-            $format  = Foswiki::urlEncode($format);
-            $footer  = Foswiki::urlEncode($footer);
-            $header  = Foswiki::urlEncode($header);
-
-            $output =
-"<input type=\"button\" value=\"$label\" onclick=\"\$('#$ajax').load('%SCRIPTURLPATH%/rest/PerforcePlugin/p4changespi?reverse=$reverse&description=$description&header=$header&footer=$footer&topic=%WEB%.%TOPIC%&_DEFAULT=$default&format=$format', {}, function(){\$('#$ajax').show('slow');})\"/><div style=\"display: none\" id=\"$ajax\"></div>";
-        }
-        else {
-
-            #By default use POST
-            my $jsHash =
-"{ topic:'%WEB%.%TOPIC%' , _DEFAULT: '$default' , format: '$format', header: '$header' , footer: '$footer', description: '$description', reverse: '$reverse' }";
-
-            $output =
-"<input type=\"button\" value=\"$label\" onclick=\"\$('#$ajax').load('%SCRIPTURLPATH%/rest/PerforcePlugin/p4changespi', $jsHash, function(){\$('#$ajax').show('slow');})\"/><div style=\"display: none\" id=\"$ajax\"></div>";
-        }
-
-        #die $output;
-        return "$output";
-    }
-
-    return handleP4ChangesPendingIntegration(@_);
-}
-
+	
 ##############################################
-
+	
 =pod
 
 ---++ restP4CHANGESPI($session) -> $text
 
 =cut
 
-sub restP4CHANGESPI {
-    my ($session) = @_;
-    my $query = Foswiki::Func::getCgiQuery();
 
-    my %params;
-
-    #Just pass on the following parameter
-    $params{'_DEFAULT'}    = $query->param('_DEFAULT');
-    $params{'format'}      = $query->param('format');
-    $params{'footer'}      = $query->param('footer');
-    $params{'header'}      = $query->param('header');
-    $params{'description'} = $query->param('description');
-    $params{'reverse'}     = $query->param('reverse');
-
-    my $output = handleP4ChangesPendingIntegration( $session, \%params );
-
-    $output = Foswiki::Func::expandCommonVariables($output);
-    $output = Foswiki::Func::renderText($output);
-
-    return "$output\n\n";
-
-    #return "This is an example of a REST invocation\n\n";
-}
-
+sub restP4CHANGESPI 
+	{
+   	my ($session) = @_;   
+   	my $query = Foswiki::Func::getCgiQuery();
+   	
+   	my %params;
+   	
+   	#Just pass on the following parameter
+   	$params{'_DEFAULT'}=$query->param('_DEFAULT');
+   	$params{'format'}=$query->param('format');   	
+	$params{'footer'}=$query->param('footer');
+   	$params{'header'}=$query->param('header');   	
+	$params{'description'}=$query->param('description');
+   	$params{'reverse'}=$query->param('reverse');   	
+   	
+    
+   	
+   	my $output=handleP4ChangesPendingIntegration($session,\%params);
+   	
+   	$output=Foswiki::Func::expandCommonVariables($output);  
+   	$output=Foswiki::Func::renderText($output);
+   	
+   	return "$output\n\n";	   		
+	#return "This is an example of a REST invocation\n\n";
+	}	
+	
+	
 #########################################################
-
 =pod	
 	
 =cut
 
-sub handleP4ChangesPendingIntegration {
-    my ( $session, $params, $theTopic, $theWeb ) = @_;
-
-    my $branchName = $params->{_DEFAULT};
-    my $reverse =
-      ( defined $params->{reverse} && $params->{reverse} eq 'on' ? '-r' : '' );
-    my $format = $params->{format};
+sub handleP4ChangesPendingIntegration
+	{
+	my($session, $params, $theTopic, $theWeb) = @_;   	
+		
+	my $branchName=$params->{_DEFAULT};
+	my $reverse=(defined $params->{reverse} && $params->{reverse} eq 'on' ? '-r' : '');	
+	my $format=$params->{format};
     my $header = $params->{header};
-    my $footer = $params->{footer};
+    my $footer = $params->{footer};    
 
-    #Interpret description parameter
-    my $description = $params->{description};
-    if ( defined $description ) {
-        if ( $description eq 'long' ) {
-            $description = '-L';
-        }
-        elsif ( $description eq 'full' ) {
-            $description = '-l';
-        }
-        else {
-            $description = '';
-        }
-    }
-
-    my $cmd = PerforceBaseCmd( $p4port, $p4client, $p4user, $p4password );
-    my $integrateCmd = "$cmd integrate $reverse -n -d -b $branchName 2>&1"
-      ;    #redirect error output
-
-#BAD: untaint the cmd. See: http://gunther.web66.com/FAQS/taintmode.html
-#Basically with perl -T you can't execute a system command but that trick fixes us.
-    $integrateCmd =~ /^(.*)$/;
-    $integrateCmd = $1;
-
+	
+	#Interpret description parameter
+	my $description=$params->{description};
+	if (defined $description)
+		{
+		if ($description eq 'long')
+			{
+			$description='-L';	
+			}
+		elsif ($description eq 'full')
+			{
+			$description='-l';		
+			}
+		else
+			{
+			$description = '';		
+			}
+		}
+	
+	my $cmd=PerforceBaseCmd($p4port, $p4client, $p4user, $p4password);
+	my $integrateCmd="$cmd integrate $reverse -n -d -b $branchName 2>&1"; #redirect error output
+	
+    #BAD: untaint the cmd. See: http://gunther.web66.com/FAQS/taintmode.html
+    #Basically with perl -T you can't execute a system command but that trick fixes us.
+    $integrateCmd=~/^(.*)$/; $integrateCmd=$1;
     #return $integrateCmd; #debug
-
-    #Run the integrate command
-    my @integrateOutput = `$integrateCmd`;
-
-    #return "$integrateCmd";
-    my @changesOutput;
-
-    #Parse the integrate lines...
-    #and run changes command for each of them...
-    #thus collecting the changes corresponding to each integration
-    foreach my $line (@integrateOutput) {
-        my $toFile;
-        my $fromFile;
-        my $fromVersion1;
-        my $fromVersion2;
-
-        if ( $line =~ /^(.+?) - .* from (.+?)#(\d+),#(\d+)$/ ) {
-            $toFile       = $1;
-            $fromFile     = $2;
-            $fromVersion1 = $3;
-            $fromVersion2 = $4;
-        }
-        elsif ( $line =~ /^(.+?) - .* from\s+(.+?)#(\d+)$/ ) {
-            $toFile       = $1;
-            $fromFile     = $2;
-            $fromVersion1 = $3;
-            $fromVersion2 = $fromVersion1;
-
-            #print "NICE!\n";
-        }
-        else {
-            return "ERROR: $line";
-            next;
-        }
-
-        #print "p4 changes $fromFile#$fromVersion1,#$fromVersion2\n";
-
-        my $changesCmd =
-          "$cmd changes $description $fromFile#$fromVersion1,#$fromVersion2";
-
-#BAD: untaint the cmd. See: http://gunther.web66.com/FAQS/taintmode.html
-#Basically with perl -T you can't execute a system command but that trick fixes us.
-        $changesCmd =~ /^(.*)$/;
-        $changesCmd = $1;
-
-        my @newChangesOutput = `$changesCmd`;
-        push( @changesOutput, @newChangesOutput );
-    }
-
-    #Parse all changes to get ride of duplicates
-    if ( $description eq '' ) {
-        @changesOutput = ExcludeDuplicateChangesBasicOutput( \@changesOutput );
-    }
-    else {
-        @changesOutput =
-          ExcludeDuplicateChangesLongDescriptionOutput( \@changesOutput );
-    }
-
-    my $output = "";
-
-    #Format the filtered results
-    if ( defined $format ) {
-        if ( $description eq '' ) {
-            $output =
-              ParseAndFormatP4ChangesBasicOutput( $format, \@changesOutput );
-        }
-        else {
-            $output = ParseAndFormatP4ChangesLongDescriptionOutput( $format,
-                \@changesOutput );
-        }
-    }
-    else {
-        foreach my $change (@changesOutput) {
-            $output .= Foswiki::entityEncode($change);
-            $output .= " <br /> "
-              ; #NOTE: we have a space after and before the br element. This helps InterWiki plugin to do its job
-        }
-    }
-
-    #Deal with header and format
-    if ( defined $header ) {
-        $header = CommonVariableSubstitution($header);
-        $output = $header . $output;
-    }
-
-    if ( defined $footer ) {
-        $footer = CommonVariableSubstitution($footer);
-        $output = $output . $footer;
-    }
-
-    return $output;
-}
-
+    
+	#Run the integrate command
+	my @integrateOutput=`$integrateCmd`;
+	#return "$integrateCmd";	
+	my @changesOutput;
+	
+	#Parse the integrate lines...
+	#and run changes command for each of them...
+	#thus collecting the changes corresponding to each integration	
+	foreach my $line(@integrateOutput)
+		{
+		my $toFile;	
+		my $fromFile;	
+		my $fromVersion1; 
+		my $fromVersion2; 
+	
+		if ($line=~/^(.+?) - .* from (.+?)#(\d+),#(\d+)$/)
+			{
+			$toFile=$1;	
+			$fromFile=$2;	
+			$fromVersion1=$3; 
+			$fromVersion2=$4; 			
+			}
+		elsif ($line=~/^(.+?) - .* from\s+(.+?)#(\d+)$/)
+			{
+			$toFile=$1;	
+			$fromFile=$2;	
+			$fromVersion1=$3; 
+			$fromVersion2=$fromVersion1; 						
+			#print "NICE!\n";
+			}
+		else
+			{
+			return "ERROR: $line";
+			next;
+			}
+		
+		#print "p4 changes $fromFile#$fromVersion1,#$fromVersion2\n";			
+		
+		my $changesCmd="$cmd changes $description $fromFile#$fromVersion1,#$fromVersion2";				
+		#BAD: untaint the cmd. See: http://gunther.web66.com/FAQS/taintmode.html
+    	#Basically with perl -T you can't execute a system command but that trick fixes us.
+    	$changesCmd=~/^(.*)$/; $changesCmd=$1;    	
+    	
+		my @newChangesOutput=`$changesCmd`;		
+		push(@changesOutput,@newChangesOutput);					
+		}
+	
+	#Parse all changes to get ride of duplicates
+	if ($description eq '')	
+		{
+		@changesOutput=ExcludeDuplicateChangesBasicOutput(\@changesOutput);		
+		}
+	else
+		{
+		@changesOutput=ExcludeDuplicateChangesLongDescriptionOutput(\@changesOutput);	
+		}
+	
+	my $output="";		
+	
+	#Format the filtered results	
+	if (defined $format)
+		{
+		if ($description eq '')	
+			{
+			$output=ParseAndFormatP4ChangesBasicOutput($format,\@changesOutput);			
+			}
+		else
+			{
+			$output=ParseAndFormatP4ChangesLongDescriptionOutput($format,\@changesOutput);
+			}
+		}
+	else
+		{
+		foreach my $change(@changesOutput)
+			{
+    		$output .= Foswiki::entityEncode($change);
+	    	$output .= " <br /> "; #NOTE: we have a space after and before the br element. This helps InterWiki plugin to do its job
+			}			
+		}
+	
+	#Deal with header and format		
+	if (defined $header)
+		{
+		$header=CommonVariableSubstitution($header);	
+		$output = $header.$output;	
+		}
+		
+	if (defined $footer)
+		{
+		$footer=CommonVariableSubstitution($footer);		
+		$output = $output.$footer;	
+		}			
+		
+	return $output;											
+	}
+	
+	
+		
+	
 =pod
 
 Core p4 changes functionality
@@ -540,9 +548,9 @@ p4password
 
 =cut
 
-sub handleP4Changes {
-    my ( $session, $params, $theTopic, $theWeb ) = @_;
-
+sub handleP4Changes 
+	{
+    my($session, $params, $theTopic, $theWeb) = @_;
     # $session  - a reference to the TWiki session object (if you don't know
     #             what this is, just ignore it)
     # $params=  - a reference to a Foswiki::Attrs object containing parameters.
@@ -556,16 +564,17 @@ sub handleP4Changes {
     # For example, %EXAMPLETAG{'hamburger' sideorder="onions"}%
     # $params->{_DEFAULT} will be 'hamburger'
     # $params->{sideorder} will be 'onions'
-
-#my $p4ChangesTemplate='p4 %p4port% %p4client% %p4user% %p4password% %p4cmd% %i% %t% %l% %L% %c% %m% %s% %u% %file%';
-
-#my $p4ChangesTemplate='p4 %p4port% %p4client% %p4user% %p4password% %p4cmd% %params% %file%';
-#my $p4ChangesTemplate='p4 %P4PORT% %P4CLIENT% %P4USER% %P4PASSWORD% %P4CMD% %PARAMS% %FILE%';
-#my $p4ChangesTemplate='dir %DRIVE%';
-#my $p4ChangesTemplate='p4 %DRIVE%';
-
+    
+    
+    #my $p4ChangesTemplate='p4 %p4port% %p4client% %p4user% %p4password% %p4cmd% %i% %t% %l% %L% %c% %m% %s% %u% %file%';
+    
+    #my $p4ChangesTemplate='p4 %p4port% %p4client% %p4user% %p4password% %p4cmd% %params% %file%';
+    #my $p4ChangesTemplate='p4 %P4PORT% %P4CLIENT% %P4USER% %P4PASSWORD% %P4CMD% %PARAMS% %FILE%';
+    #my $p4ChangesTemplate='dir %DRIVE%';
+    #my $p4ChangesTemplate='p4 %DRIVE%';
+    
     #$p4CmdParams{'p4cmd'}=changes
-
+    
 =pod    
 
 	#Use that with sysCommand if ever you can get it working
@@ -584,101 +593,102 @@ sub handleP4Changes {
     		'DRIVE' => "changes"
 					);			
 =cut
-
-    my $changesCmdParams = $params->{_DEFAULT};
-
-#TODO: $changesCmdParams parse our p4 changes options to make sure nthing malicious is in there
-
+					    
+    
+    my $changesCmdParams=$params->{_DEFAULT};
+    #TODO: $changesCmdParams parse our p4 changes options to make sure nthing malicious is in there 
+        
     #my $fileSpec = $params->{_DEFAULT};
-    my $format = $params->{format};
+    my $format = $params->{format};    
     my $header = $params->{header};
-    my $footer = $params->{footer};
-
+    my $footer = $params->{footer};    
+        
     #return "$header\n$format\n$footer";
-
-    my $cmd = PerforceBaseCmd( $p4port, $p4client, $p4user, $p4password );
-
+    
+    my $cmd=PerforceBaseCmd($p4port, $p4client, $p4user, $p4password);
     #$cmd= "$cmd changes $changesCmdParams $fileSpec";
-    $cmd = "$cmd changes $changesCmdParams";
-
+    $cmd= "$cmd changes $changesCmdParams";
+    
+    
     #Validate our command line
-    if ( $cmd =~ /\s+-t\s*/ ) {
-        return "%RED%P4CHANGES error: -t option not supported!%ENDCOLOR%";
-    }
-
+    if ($cmd =~ /\s+-t\s*/)
+    	{
+		return "%RED%P4CHANGES error: -t option not supported!%ENDCOLOR%";	    	
+    	}
     # -s flag is now supported
     #elsif ($cmd =~ /\s+-s\s*/)
     #	{
-    #    return "%RED%P4CHANGES error: -s option not supported!%ENDCOLOR%";
+	#    return "%RED%P4CHANGES error: -s option not supported!%ENDCOLOR%";	
     #	}
+        
+    
+    # 
+    #BAD: untaint the cmd. See: http://gunther.web66.com/FAQS/taintmode.html
+    #Basically with perl -T you can't execute a system command but that trick fixes us.
+    $cmd=~/^(.*)$/; $cmd=$1;
 
-#
-#BAD: untaint the cmd. See: http://gunther.web66.com/FAQS/taintmode.html
-#Basically with perl -T you can't execute a system command but that trick fixes us.
-    $cmd =~ /^(.*)$/;
-    $cmd = $1;
-
-#execute the command
-#return "$cmd";
-#my @changesCmdOutput=Foswiki::Sandbox::sysCommand($cmd); #TODO: should be using that API instead of backticks
-    my @changesCmdOutput = `$cmd`
-      ; #I know I should not be using backticks but I can't get sysCommand to work ;)
-        #return "after execute";
-
-#my ($changesCmdOutput,$exit)=$session->Foswiki::Sandbox::sysCommand('dir %DRIVE%','DRIVE' => "C:");
-#my ($changesCmdOutput,$exit)=$session->Foswiki::Sandbox::sysCommand($p4ChangesTemplate,%p4ChangesCmdParams);
-#return $changesCmdOutput;
-#return $exit;
-#my @changesCmdOutput=split $changesCmdOutput;
-
+    #execute the command    
+    #return "$cmd";
+    #my @changesCmdOutput=Foswiki::Sandbox::sysCommand($cmd); #TODO: should be using that API instead of backticks    
+    my @changesCmdOutput=`$cmd`; #I know I should not be using backticks but I can't get sysCommand to work ;)    
+    #return "after execute";
+    
+    #my ($changesCmdOutput,$exit)=$session->Foswiki::Sandbox::sysCommand('dir %DRIVE%','DRIVE' => "C:");     
+    #my ($changesCmdOutput,$exit)=$session->Foswiki::Sandbox::sysCommand($p4ChangesTemplate,%p4ChangesCmdParams); 
+    #return $changesCmdOutput;
+    #return $exit;
+    #my @changesCmdOutput=split $changesCmdOutput;
+    
     #Parse and format the output
-    my $output = "";
-    if ( defined $format ) {
+    my $output="";    
+    if (defined $format)
+    	{
+	    #return "format";	
+	    if ($cmd =~ /\s+-l\s*/)	
+	    	{
+		    #return "Parse full description";		    	  			    	  	
+	    	$output=ParseAndFormatP4ChangesLongDescriptionOutput($format,\@changesCmdOutput);
+    		}
+	    elsif ($cmd =~ /\s+-L\s*/)	
+	    	{
+		    #return "Parse 250 characters description";		    	  	
+	    	$output=ParseAndFormatP4ChangesLongDescriptionOutput($format,\@changesCmdOutput);
+    		}    		
+    	else
+    		{
+	    	#return "Parse basic";	
+	    	$output=ParseAndFormatP4ChangesBasicOutput($format,\@changesCmdOutput);		    		
+    		}
+    	}
+    else
+    	{
+	    #return "no format";
+    	#Change 69463 on 2008/02/06 by sl@sl-ti 'Some nice comments'     	
+    	#No format specified, use default format. No need to parse anything
+    	foreach my $change(@changesCmdOutput)
+    		{
+	    	$output .= Foswiki::entityEncode($change);
+		    $output .= " <br /> "; #NOTE: we have a space after and before the br element. This helps InterWiki plugin to do its job
+    		}
+		}
+    
+	if (defined $header)
+		{
+		$header=CommonVariableSubstitution($header);	
+		$output = $header.$output;	
+		}
+		
+	if (defined $footer)
+		{
+		$footer=CommonVariableSubstitution($footer);		
+		$output = $output.$footer;	
+		}		
+				
+		
+    return $output;        
+	}
 
-        #return "format";
-        if ( $cmd =~ /\s+-l\s*/ ) {
 
-            #return "Parse full description";
-            $output = ParseAndFormatP4ChangesLongDescriptionOutput( $format,
-                \@changesCmdOutput );
-        }
-        elsif ( $cmd =~ /\s+-L\s*/ ) {
-
-            #return "Parse 250 characters description";
-            $output = ParseAndFormatP4ChangesLongDescriptionOutput( $format,
-                \@changesCmdOutput );
-        }
-        else {
-
-            #return "Parse basic";
-            $output =
-              ParseAndFormatP4ChangesBasicOutput( $format, \@changesCmdOutput );
-        }
-    }
-    else {
-
-        #return "no format";
-        #Change 69463 on 2008/02/06 by sl@sl-ti 'Some nice comments'
-        #No format specified, use default format. No need to parse anything
-        foreach my $change (@changesCmdOutput) {
-            $output .= Foswiki::entityEncode($change);
-            $output .= " <br /> "
-              ; #NOTE: we have a space after and before the br element. This helps InterWiki plugin to do its job
-        }
-    }
-
-    if ( defined $header ) {
-        $header = CommonVariableSubstitution($header);
-        $output = $header . $output;
-    }
-
-    if ( defined $footer ) {
-        $footer = CommonVariableSubstitution($footer);
-        $output = $output . $footer;
-    }
-
-    return $output;
-}
 
 =pod
 
@@ -714,13 +724,10 @@ This handler is called very early, immediately after =earlyInitPlugin=.
 =cut
 
 sub DISABLE_initializeUserHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     ### my ( $loginName, $url, $pathInfo ) = @_;
 
-    Foswiki::Func::writeDebug(
-        "- ${pluginName}::initializeUserHandler( $_[0], $_[1] )")
-      if $debug;
+    Foswiki::Func::writeDebug( "- ${pluginName}::initializeUserHandler( $_[0], $_[1] )" ) if $debug;
 }
 
 =pod
@@ -737,13 +744,10 @@ Called when a new user registers with this TWiki.
 =cut
 
 sub DISABLE_registrationHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     ### my ( $web, $wikiName, $loginName ) = @_;
 
-    Foswiki::Func::writeDebug(
-        "- ${pluginName}::registrationHandler( $_[0], $_[1] )")
-      if $debug;
+    Foswiki::Func::writeDebug( "- ${pluginName}::registrationHandler( $_[0], $_[1] )" ) if $debug;
 }
 
 =pod
@@ -779,13 +783,10 @@ handler. Use the =$meta= object.
 =cut
 
 sub DISABLE_commonTagsHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     ### my ( $text, $topic, $web, $meta ) = @_;
 
-    Foswiki::Func::writeDebug(
-        "- ${pluginName}::commonTagsHandler( $_[2].$_[1] )")
-      if $debug;
+    Foswiki::Func::writeDebug( "- ${pluginName}::commonTagsHandler( $_[2].$_[1] )" ) if $debug;
 
     # do custom extension rule, like for example:
     # $_[0] =~ s/%XYZ%/&handleXyz()/ge;
@@ -816,13 +817,10 @@ __NOTE:__ This handler is not separately called on included topics.
 =cut
 
 sub DISABLE_beforeCommonTagsHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     ### my ( $text, $topic, $web, $meta ) = @_;
 
-    Foswiki::Func::writeDebug(
-        "- ${pluginName}::beforeCommonTagsHandler( $_[2].$_[1] )")
-      if $debug;
+    Foswiki::Func::writeDebug( "- ${pluginName}::beforeCommonTagsHandler( $_[2].$_[1] )" ) if $debug;
 }
 
 =pod
@@ -846,13 +844,10 @@ handler.
 =cut
 
 sub DISABLE_afterCommonTagsHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     ### my ( $text, $topic, $web, $meta ) = @_;
 
-    Foswiki::Func::writeDebug(
-        "- ${pluginName}::afterCommonTagsHandler( $_[2].$_[1] )")
-      if $debug;
+    Foswiki::Func::writeDebug( "- ${pluginName}::afterCommonTagsHandler( $_[2].$_[1] )" ) if $debug;
 }
 
 =pod
@@ -903,7 +898,6 @@ Since Foswiki::Plugins::VERSION = '1.026'
 =cut
 
 sub DISABLE_preRenderingHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     #my( $text, $pMap ) = @_;
 }
@@ -924,7 +918,6 @@ Since Foswiki::Plugins::VERSION = '1.026'
 =cut
 
 sub DISABLE_postRenderingHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     #my $text = shift;
 }
@@ -946,13 +939,10 @@ __NOTE__: meta-data may be embedded in the text passed to this handler
 =cut
 
 sub DISABLE_beforeEditHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     ### my ( $text, $topic, $web ) = @_;
 
-    Foswiki::Func::writeDebug(
-        "- ${pluginName}::beforeEditHandler( $_[2].$_[1] )")
-      if $debug;
+    Foswiki::Func::writeDebug( "- ${pluginName}::beforeEditHandler( $_[2].$_[1] )" ) if $debug;
 }
 
 =pod
@@ -975,13 +965,10 @@ handler. Use the =$meta= object.
 =cut
 
 sub DISABLE_afterEditHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     ### my ( $text, $topic, $web ) = @_;
 
-    Foswiki::Func::writeDebug(
-        "- ${pluginName}::afterEditHandler( $_[2].$_[1] )")
-      if $debug;
+    Foswiki::Func::writeDebug( "- ${pluginName}::afterEditHandler( $_[2].$_[1] )" ) if $debug;
 }
 
 =pod
@@ -1006,13 +993,10 @@ text format.
 =cut
 
 sub DISABLE_beforeSaveHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     ### my ( $text, $topic, $web ) = @_;
 
-    Foswiki::Func::writeDebug(
-        "- ${pluginName}::beforeSaveHandler( $_[2].$_[1] )")
-      if $debug;
+    Foswiki::Func::writeDebug( "- ${pluginName}::beforeSaveHandler( $_[2].$_[1] )" ) if $debug;
 }
 
 =pod
@@ -1034,13 +1018,10 @@ __NOTE:__ meta-data is embedded in $text (using %META: tags)
 =cut
 
 sub DISABLE_afterSaveHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     ### my ( $text, $topic, $web, $error, $meta ) = @_;
 
-    Foswiki::Func::writeDebug(
-        "- ${pluginName}::afterSaveHandler( $_[2].$_[1] )")
-      if $debug;
+    Foswiki::Func::writeDebug( "- ${pluginName}::afterSaveHandler( $_[2].$_[1] )" ) if $debug;
 }
 
 =pod
@@ -1061,13 +1042,11 @@ This handler is called just after the rename/move/delete action of a web, topic 
 =cut
 
 sub DISABLE_afterRenameHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     ### my ( $oldWeb, $oldTopic, $oldAttachment, $newWeb, $newTopic, $newAttachment ) = @_;
 
-    Foswiki::Func::writeDebug( "- ${pluginName}::afterRenameHandler( "
-          . "$_[0].$_[1] $_[2] -> $_[3].$_[4] $_[5] )" )
-      if $debug;
+    Foswiki::Func::writeDebug( "- ${pluginName}::afterRenameHandler( " .
+                             "$_[0].$_[1] $_[2] -> $_[3].$_[4] $_[5] )" ) if $debug;
 }
 
 =pod
@@ -1090,12 +1069,9 @@ The attributes hash will include at least the following attributes:
 =cut
 
 sub DISABLE_beforeAttachmentSaveHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     ###   my( $attrHashRef, $topic, $web ) = @_;
-    Foswiki::Func::writeDebug(
-        "- ${pluginName}::beforeAttachmentSaveHandler( $_[2].$_[1] )")
-      if $debug;
+    Foswiki::Func::writeDebug( "- ${pluginName}::beforeAttachmentSaveHandler( $_[2].$_[1] )" ) if $debug;
 }
 
 =pod
@@ -1116,12 +1092,9 @@ will include at least the following attributes:
 =cut
 
 sub DISABLE_afterAttachmentSaveHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     ###   my( $attrHashRef, $topic, $web ) = @_;
-    Foswiki::Func::writeDebug(
-        "- ${pluginName}::afterAttachmentSaveHandler( $_[2].$_[1] )")
-      if $debug;
+    Foswiki::Func::writeDebug( "- ${pluginName}::afterAttachmentSaveHandler( $_[2].$_[1] )" ) if $debug;
 }
 
 =begin TML
@@ -1143,7 +1116,6 @@ topic text (and in forms).
 =cut
 
 sub DISABLE_beforeMergeHandler {
-
     # do not uncomment, use $_[0], $_[1]... instead
     #my( $text, $currRev, $currText, $origRev, $origText, $web, $topic ) = @_;
 }
@@ -1221,8 +1193,7 @@ using the =Foswiki::Func::addToHEAD= method.
 sub DISABLE_modifyHeaderHandler {
     my ( $headers, $query ) = @_;
 
-    Foswiki::Func::writeDebug("- ${pluginName}::modifyHeaderHandler()")
-      if $debug;
+    Foswiki::Func::writeDebug( "- ${pluginName}::modifyHeaderHandler()" ) if $debug;
 }
 
 =pod
@@ -1242,13 +1213,10 @@ the others will be ignored.
 =cut
 
 sub DISABLE_redirectCgiQueryHandler {
-
     # do not uncomment, use $_[0], $_[1] instead
     ### my ( $query, $url ) = @_;
 
-    Foswiki::Func::writeDebug(
-        "- ${pluginName}::redirectCgiQueryHandler( query, $_[1] )")
-      if $debug;
+    Foswiki::Func::writeDebug( "- ${pluginName}::redirectCgiQueryHandler( query, $_[1] )" ) if $debug;
 }
 
 =pod
@@ -1301,7 +1269,7 @@ Return the new link text.
 =cut
 
 sub DISABLE_renderWikiWordHandler {
-    my ( $linkText, $hasExplicitLinkLabel, $web, $topic ) = @_;
+    my( $linkText, $hasExplicitLinkLabel, $web, $topic ) = @_;
     return $linkText;
 }
 
@@ -1322,10 +1290,13 @@ cache and security plugins.
 =cut
 
 sub DISABLE_completePageHandler {
-
     #my($html, $httpHeaders) = @_;
     # modify $_[0] or $_[1] if you must change the HTML or headers
 }
+
+
+
+
 
 =pod
 
@@ -1333,400 +1304,390 @@ Build p4 command global options.
 
 =cut
 
-sub PerforceBaseCmd {
-    my ( $aPort, $aClient, $aUser, $aPassword ) = @_;
 
-    my $baseCmd = "p4 ";
+sub PerforceBaseCmd
+	{
+	my ($aPort, $aClient, $aUser, $aPassword) = @_;	
+	
+	my $baseCmd="p4 ";
+	
+	$baseCmd .= "-p $aPort " if defined $aPort;
+	$baseCmd .= "-c $aClient " if defined $aClient;
+	$baseCmd .= "-u $aUser " if defined $aUser;
+	$baseCmd .= "-P $aPassword " if defined $aPassword;
+		
+	return $baseCmd;		
+	}
 
-    $baseCmd .= "-p $aPort "     if defined $aPort;
-    $baseCmd .= "-c $aClient "   if defined $aClient;
-    $baseCmd .= "-u $aUser "     if defined $aUser;
-    $baseCmd .= "-P $aPassword " if defined $aPassword;
-
-    return $baseCmd;
-}
-
-sub P4ChangesVariableSubstitution {
-    my (
-        $format, $changelist, $year,   $month, $day,
-        $user,   $client,     $status, $description
-    ) = @_;
-
-    #TODO: is the nop gonna be working with the n?
-    #We should use CommonVariableSubstitution instead of duplicating hash values
-    my %substitutions = (
-        'changelist'  => $changelist,
-        'year'        => $year,
-        'month'       => $month,
-        'day'         => $day,
-        'user'        => $user,
-        'client'      => $client,
-        'description' => $description,
-        'date'        => "$year/$month/$day",
-        'status'      => $status,
-        'nop'         => '',
-        'quot'        => '"',
-        'percnt'      => '%',
-        'pipe'        => '|',
-        'dollar'      => '$',
-        'n'           => "\n"
-    );
-
-    my $formated = $format;
-
-    #%fields=;
-    #my $formFieldRef=$self->{FormFields};
-    while ( my ( $key, $value ) = each(%substitutions) ) {
-        $formated =~ s/\$$key/$value/g;
-    }
-
+sub P4ChangesVariableSubstitution
+	{	
+	my ($format, $changelist, $year, $month, $day, $user, $client, $status, $description) = @_;
+	
+	#TODO: is the nop gonna be working with the n?
+	#We should use CommonVariableSubstitution instead of duplicating hash values
+	my %substitutions=(
+			'changelist' => $changelist,
+			'year' => $year,			
+			'month' => $month,
+			'day' => $day,			
+			'user' => $user,			
+			'client' => $client,
+			'description' => $description,
+			'date' => "$year/$month/$day",
+			'status' => $status,
+			'nop' => '',
+			'quot' => '"',
+			'percnt' => '%',
+			'pipe' => '|',
+			'dollar' => '$',
+			'n' => "\n"			
+		 	);
+	
+		 	
+	my $formated = $format;
+	#%fields=;		
+	#my $formFieldRef=$self->{FormFields};		
+  	while ( my ($key, $value) = each(%substitutions) )
+    		{     	
+       		$formated =~ s/\$$key/$value/g;
+       		}	
+	
     return "$formated";
+	#return "$changelist, $year, $month, $day, $user, $client, $description";		       							
+	
+	#return "$changelist, $year, $month, $day, $user, $client, $description";		
+	}
 
-    #return "$changelist, $year, $month, $day, $user, $client, $description";
-
-    #return "$changelist, $year, $month, $day, $user, $client, $description";
-}
 
 =pod
 
 =cut
-
-sub CommonVariableSubstitution {
-    my ($format) = @_;
-
-    #TODO: is the nop gonna be working with the n?
-    my %substitutions = (
-        'nop'    => '',
-        'quot'   => '"',
-        'percnt' => '%',
-        'pipe'   => '|',
-        'dollar' => '$',
-        'n'      => "\n"
-    );
-
-    my $formated = $format;
-    while ( my ( $key, $value ) = each(%substitutions) ) {
-        $formated =~ s/\$$key/$value/g;
-    }
-
+	
+	
+sub CommonVariableSubstitution
+	{	
+	my ($format) = @_;
+	
+	#TODO: is the nop gonna be working with the n?	
+	my %substitutions=(
+			'nop' => '',
+			'quot' => '"',
+			'percnt' => '%',
+			'pipe' => '|',			
+			'dollar' => '$',
+			'n' => "\n"
+		 	);
+			 	
+	my $formated = $format;
+  	while ( my ($key, $value) = each(%substitutions) )
+    		{     	
+       		$formated =~ s/\$$key/$value/g;
+       		}	
+	
     return "$formated";
-}
+	}
+	
+=pod
+
+=cut
+		
+sub EarlyVariableSubstitution
+	{	
+	my ($format) = @_;
+	
+	#TODO: is the nop gonna be working with the n?	
+	my %substitutions=(
+			#'nop' => '',
+			'quot' => '"',
+			#'#' => '%23',
+			#'percnt' => '%',
+			#'dollar' => '$'
+		 	);
+			 	
+	my $formated = $format;
+  	while ( my ($key, $value) = each(%substitutions) )
+    		{     	
+       		$formated =~ s/\$$key/$value/g;
+       		}	
+	
+    return "$formated";
+	}
 
 =pod
 
 =cut
-
-sub EarlyVariableSubstitution {
-    my ($format) = @_;
-
-    #TODO: is the nop gonna be working with the n?
-    my %substitutions = (
-
-        #'nop' => '',
-        'quot' => '"',
-
-        #'#' => '%23',
-        #'percnt' => '%',
-        #'dollar' => '$'
-    );
-
-    my $formated = $format;
-    while ( my ( $key, $value ) = each(%substitutions) ) {
-        $formated =~ s/\$$key/$value/g;
-    }
-
+		
+sub UrlEncode
+	{	
+	my ($format) = @_;
+	
+	#TODO: is the nop gonna be working with the n?	
+	my %substitutions=(
+			#'nop' => '',
+			'"' => '%22',
+			'#' => '%23',
+			#'percnt' => '%',
+			#'dollar' => '$'
+		 	);
+			 	
+	my $formated = $format;
+  	while ( my ($key, $value) = each(%substitutions) )
+    		{     	
+       		$formated =~ s/$key/$value/g;
+       		}	
+	
     return "$formated";
-}
-
-=pod
-
-=cut
-
-sub UrlEncode {
-    my ($format) = @_;
-
-    #TODO: is the nop gonna be working with the n?
-    my %substitutions = (
-
-        #'nop' => '',
-        '"' => '%22',
-        '#' => '%23',
-
-        #'percnt' => '%',
-        #'dollar' => '$'
-    );
-
-    my $formated = $format;
-    while ( my ( $key, $value ) = each(%substitutions) ) {
-        $formated =~ s/$key/$value/g;
-    }
-
-    return "$formated";
-}
-
+	}
+	
+		
+#
+#
+#
+	
+sub ParseAndFormatP4ChangesBasicOutput()
+	{
+	my $format=$_[0];	
+	my $changesCmdOutputRef=$_[1];	
+	my @changesCmdOutput=@$changesCmdOutputRef;	
+		
+	#There was a format specified  so let's just parse our results
+	my $output="";
+    foreach my $change(@changesCmdOutput)
+    	{
+	   	#Change 69463 on 2008/02/06 by sl@sl-ti 'Some nice comments'
+		#Parse one change line	    	
+	    	    	
+	    #Without pending status 	
+    	if ($change =~ /^Change\s+(\d+)\s+on\s+(\d+)\/(\d+)\/(\d+)\s+by\s+([^\s]+)@([^\s]+)\s+'(.*)'$/)
+    		{	    		
+	    	my $changelist=$1;			
+	    	my $year=$2;
+	    	my $month=$3;
+	    	my $day=$4;
+	    	my $user=$5;
+	    	my $client=$6;
+	    	my $description=Foswiki::entityEncode($7);
+	    	my $status='submitted'; 
+	    	
+	    	#my $line=$format;
+	    	$output.=P4ChangesVariableSubstitution($format, $changelist, $year, $month, $day, $user, $client, $status, $description);
+	    	
+	    	#Perform var substitutions	    		    	
+    		}
+    	#With pending status 	
+		elsif ($change =~ /^Change\s+(\d+)\s+on\s+(\d+)\/(\d+)\/(\d+)\s+by\s+([^\s]+)@([^\s]+)\s+\*pending\*\s+'(.*)'$/)    		
+			{
+	    	my $changelist=$1;			
+	    	my $year=$2;
+	    	my $month=$3;
+	    	my $day=$4;
+	    	my $user=$5;
+	    	my $client=$6;
+	    	my $description=Foswiki::entityEncode($7);
+	    	my $status='pending'; 
+	    	
+	    	#my $line=$format;
+	    	$output.=P4ChangesVariableSubstitution($format, $changelist, $year, $month, $day, $user, $client, $status, $description);
+				
+				
+			}
+    	else
+    		{
+    		$output .= "Could not parse: $change";
+	    	$output .= "<br />";		    		
+    		}	    	     		
+   		}
+   		
+   	return $output;
+	}	    	    
+	
 #
 #
 #
 
-sub ParseAndFormatP4ChangesBasicOutput() {
-    my $format              = $_[0];
-    my $changesCmdOutputRef = $_[1];
-    my @changesCmdOutput    = @$changesCmdOutputRef;
+sub ParseAndFormatP4ChangesLongDescriptionOutput()
+	{
+	my $format=$_[0];	
+	my $changesCmdOutputRef=$_[1];	
+	my @changesCmdOutput=@$changesCmdOutputRef;	
+		
+	#There was a format specified  so let's just parse our results
+	my $output="";
+	
+   	my $changelist;			
+  	my $year;
+   	my $month;
+   	my $day;
+   	my $user;
+   	my $client;
+   	my $status;
+   	my $description;
 
-    #There was a format specified  so let's just parse our results
-    my $output = "";
-    foreach my $change (@changesCmdOutput) {
+	
+    foreach my $change(@changesCmdOutput)
+    	{
+	   	#Change 69463 on 2008/02/06 by sl@sl-ti 'Some nice comments'
+		#Parse one change line	    	
+	    	    	
+	    #Without pending status
+    	if ($change =~ /^Change\s+(\d+)\s+on\s+(\d+)\/(\d+)\/(\d+)\s+by\s+([^\s]+)@([^\s]+)\s*$/)
+    		{
+	    	if (defined $changelist)	
+	    		{
+		    	$output.=P4ChangesVariableSubstitution($format, $changelist, $year, $month, $day, $user, $client, $status, $description);			
+	    		}
+	    			    		
+	    	$changelist=$1;			
+	    	$year=$2;
+	    	$month=$3;
+	    	$day=$4;
+	    	$user=$5;
+	    	$client=$6;	    	
+	        $description="";
+	        $status="submitted";
+	        
+	    	#my $status='submitted'; ##TODO	    		    	
+	    	#my $line=$format;	    	    
+	    	#Perform var substitutions
+	    		    	
+    		}
+		#With pending status    		
+    	elsif ($change =~ /^Change\s+(\d+)\s+on\s+(\d+)\/(\d+)\/(\d+)\s+by\s+([^\s]+)@([^\s]+)\s+\*pending\*\s*$/)
+    		{
+	    	if (defined $changelist)	
+	    		{
+		    	$output.=P4ChangesVariableSubstitution($format, $changelist, $year, $month, $day, $user, $client, $status, $description);			
+	    		}
+	    			    		
+	    	$changelist=$1;			
+	    	$year=$2;
+	    	$month=$3;
+	    	$day=$4;
+	    	$user=$5;
+	    	$client=$6;
+	        $description="";
+	        $status="pending";
+	    		
+    		}
+    	elsif ($change =~ /^\t(.*)/) #must be description line
+    		{
+	    	my $htmlDes=Foswiki::entityEncode($1);	
+	    	$description.="$htmlDes <br /> ";	#NOTE: we have a space after and before the br element. This helps InterWiki plugin to do its job
+    		}
+    	elsif ($change =~ /^$/) #drop empty lines
+    		{
+	    	
+    		}    		
+    	else
+    		{
+    		$output .= "Could not parse: $change";
+	    	$output .= "<br />";		    		
+    		}	    	     		
+   		}
+   	
+   	#Do not forget to add the last change entry if any
+   	if (defined $changelist)	
+		{
+		$output.=P4ChangesVariableSubstitution($format, $changelist, $year, $month, $day, $user, $client, $status, $description);			
+    	}	
+   			
+   	return $output;
+	}	   
 
-        #Change 69463 on 2008/02/06 by sl@sl-ti 'Some nice comments'
-        #Parse one change line
+###################################################	
+	
+sub ExcludeDuplicateChangesBasicOutput
+	{
+	my $changesCmdOutputRef=$_[0];	
+	my @changesCmdOutput=@$changesCmdOutputRef;	
+	
+	my %changesHash=();
+	my @results;
+		
+	#There was a format specified  so let's just parse our results
+	my $output="";
+    foreach my $change(@changesCmdOutput)
+    	{
+	   	#Change 69463 on 2008/02/06 by sl@sl-ti 'Some nice comments'
+		#Parse one change line	    	
+	    	    	
+	    #Without pending status 	
+    	if ($change =~ /^Change\s+(\d+)\s+on\s+(\d+)\/(\d+)\/(\d+)\s+by\s+([^\s]+)@([^\s]+)\s+'(.*)'$/)
+    		{	    		
+	    	my $changelist=$1;			
+	    	
+	   		unless (defined ($changesHash{$changelist}))
+	   			{
+		   		$changesHash{$changelist}=1;
+		   		push (@results,$change); #Keep that change
+	   			}
+    		}
+    	else
+    		{
+	    	die "CAN'T PARSE: $change";
+    		}	    	     		
+   		}
+   		
+   	return @results;
+	}	    	    
 
-        #Without pending status
-        if ( $change =~
-/^Change\s+(\d+)\s+on\s+(\d+)\/(\d+)\/(\d+)\s+by\s+([^\s]+)@([^\s]+)\s+'(.*)'$/
-          )
-        {
-            my $changelist  = $1;
-            my $year        = $2;
-            my $month       = $3;
-            my $day         = $4;
-            my $user        = $5;
-            my $client      = $6;
-            my $description = Foswiki::entityEncode($7);
-            my $status      = 'submitted';
+###################################################	
+	
+sub ExcludeDuplicateChangesLongDescriptionOutput
+	{
+	my $changesCmdOutputRef=$_[0];	
+	my @changesCmdOutput=@$changesCmdOutputRef;	
 
-            #my $line=$format;
-            $output .= P4ChangesVariableSubstitution(
-                $format, $changelist, $year,
-                $month,  $day,        $user,
-                $client, $status,     $description
-            );
-
-            #Perform var substitutions
-        }
-
-        #With pending status
-        elsif ( $change =~
-/^Change\s+(\d+)\s+on\s+(\d+)\/(\d+)\/(\d+)\s+by\s+([^\s]+)@([^\s]+)\s+\*pending\*\s+'(.*)'$/
-          )
-        {
-            my $changelist  = $1;
-            my $year        = $2;
-            my $month       = $3;
-            my $day         = $4;
-            my $user        = $5;
-            my $client      = $6;
-            my $description = Foswiki::entityEncode($7);
-            my $status      = 'pending';
-
-            #my $line=$format;
-            $output .= P4ChangesVariableSubstitution(
-                $format, $changelist, $year,
-                $month,  $day,        $user,
-                $client, $status,     $description
-            );
-
-        }
-        else {
-            $output .= "Could not parse: $change";
-            $output .= "<br />";
-        }
-    }
-
-    return $output;
-}
-
-#
-#
-#
-
-sub ParseAndFormatP4ChangesLongDescriptionOutput() {
-    my $format              = $_[0];
-    my $changesCmdOutputRef = $_[1];
-    my @changesCmdOutput    = @$changesCmdOutputRef;
-
-    #There was a format specified  so let's just parse our results
-    my $output = "";
-
-    my $changelist;
-    my $year;
-    my $month;
-    my $day;
-    my $user;
-    my $client;
-    my $status;
-    my $description;
-
-    foreach my $change (@changesCmdOutput) {
-
-        #Change 69463 on 2008/02/06 by sl@sl-ti 'Some nice comments'
-        #Parse one change line
-
-        #Without pending status
-        if ( $change =~
-/^Change\s+(\d+)\s+on\s+(\d+)\/(\d+)\/(\d+)\s+by\s+([^\s]+)@([^\s]+)\s*$/
-          )
-        {
-            if ( defined $changelist ) {
-                $output .= P4ChangesVariableSubstitution(
-                    $format, $changelist, $year,
-                    $month,  $day,        $user,
-                    $client, $status,     $description
-                );
-            }
-
-            $changelist  = $1;
-            $year        = $2;
-            $month       = $3;
-            $day         = $4;
-            $user        = $5;
-            $client      = $6;
-            $description = "";
-            $status      = "submitted";
-
-            #my $status='submitted'; ##TODO
-            #my $line=$format;
-            #Perform var substitutions
-
-        }
-
-        #With pending status
-        elsif ( $change =~
-/^Change\s+(\d+)\s+on\s+(\d+)\/(\d+)\/(\d+)\s+by\s+([^\s]+)@([^\s]+)\s+\*pending\*\s*$/
-          )
-        {
-            if ( defined $changelist ) {
-                $output .= P4ChangesVariableSubstitution(
-                    $format, $changelist, $year,
-                    $month,  $day,        $user,
-                    $client, $status,     $description
-                );
-            }
-
-            $changelist  = $1;
-            $year        = $2;
-            $month       = $3;
-            $day         = $4;
-            $user        = $5;
-            $client      = $6;
-            $description = "";
-            $status      = "pending";
-
-        }
-        elsif ( $change =~ /^\t(.*)/ )    #must be description line
-        {
-            my $htmlDes = Foswiki::entityEncode($1);
-            $description .= "$htmlDes <br /> "
-              ; #NOTE: we have a space after and before the br element. This helps InterWiki plugin to do its job
-        }
-        elsif ( $change =~ /^$/ )    #drop empty lines
-        {
-
-        }
-        else {
-            $output .= "Could not parse: $change";
-            $output .= "<br />";
-        }
-    }
-
-    #Do not forget to add the last change entry if any
-    if ( defined $changelist ) {
-        $output .= P4ChangesVariableSubstitution(
-            $format, $changelist, $year,
-            $month,  $day,        $user,
-            $client, $status,     $description
-        );
-    }
-
-    return $output;
-}
-
-###################################################
-
-sub ExcludeDuplicateChangesBasicOutput {
-    my $changesCmdOutputRef = $_[0];
-    my @changesCmdOutput    = @$changesCmdOutputRef;
-
-    my %changesHash = ();
-    my @results;
-
-    #There was a format specified  so let's just parse our results
-    my $output = "";
-    foreach my $change (@changesCmdOutput) {
-
-        #Change 69463 on 2008/02/06 by sl@sl-ti 'Some nice comments'
-        #Parse one change line
-
-        #Without pending status
-        if ( $change =~
-/^Change\s+(\d+)\s+on\s+(\d+)\/(\d+)\/(\d+)\s+by\s+([^\s]+)@([^\s]+)\s+'(.*)'$/
-          )
-        {
-            my $changelist = $1;
-
-            unless ( defined( $changesHash{$changelist} ) ) {
-                $changesHash{$changelist} = 1;
-                push( @results, $change );    #Keep that change
-            }
-        }
-        else {
-            die "CAN'T PARSE: $change";
-        }
-    }
-
-    return @results;
-}
-
-###################################################
-
-sub ExcludeDuplicateChangesLongDescriptionOutput {
-    my $changesCmdOutputRef = $_[0];
-    my @changesCmdOutput    = @$changesCmdOutputRef;
-
-    my %changesHash = ();
-    my @results;
-
-    my $changelist;
-    my $isDuplicate;
-
-    foreach my $change (@changesCmdOutput) {
-
-        #Change 69463 on 2008/02/06 by sl@sl-ti 'Some nice comments'
-        #Parse one change line
-
-        #Without pending status
-        if ( $change =~
-/^Change\s+(\d+)\s+on\s+(\d+)\/(\d+)\/(\d+)\s+by\s+([^\s]+)@([^\s]+)\s*$/
-          )
-        {
-            $changelist = $1;
-
-            if ( defined( $changesHash{$changelist} ) ) {
-                $isDuplicate = 1;
-            }
-            else {
-                $isDuplicate = 0;
-                $changesHash{$changelist} = 1;
-                push( @results, $change );    #Keep that change
-            }
-        }
-        elsif ( $change =~ /^\t(.*)/ )        #must be description line
-        {
-            unless ($isDuplicate) {
-                push( @results, $change );    #Keep that change
-            }
-        }
-        elsif ( $change =~ /^$/ )             #drop empty lines
-        {
-            unless ($isDuplicate) {
-                push( @results, $change );    #Keep that change
-            }
-        }
-        else {
-            die "Could not parse: $change";
-        }
-    }
-
-    return @results;
-}
-
+	my %changesHash=();
+	my @results;
+	
+   	my $changelist;			
+   	my $isDuplicate;
+	
+    foreach my $change(@changesCmdOutput)
+    	{
+	   	#Change 69463 on 2008/02/06 by sl@sl-ti 'Some nice comments'
+		#Parse one change line	    	
+	    	    	
+	    #Without pending status
+    	if ($change =~ /^Change\s+(\d+)\s+on\s+(\d+)\/(\d+)\/(\d+)\s+by\s+([^\s]+)@([^\s]+)\s*$/)
+    		{    			    		
+	    	$changelist=$1;			
+	    	
+		  	if (defined ($changesHash{$changelist}))
+	   			{
+		   		$isDuplicate=1;	
+	   			}
+	   		else
+	   			{
+		   		$isDuplicate=0;		
+		   		$changesHash{$changelist}=1;
+		   		push (@results,$change); #Keep that change		   			
+	   			}	    		        	    		    	
+    		}
+    	elsif ($change =~ /^\t(.*)/) #must be description line
+    		{
+	    	unless ($isDuplicate)
+	    		{
+		    	push (@results,$change); #Keep that change
+	    		}
+    		}
+    	elsif ($change =~ /^$/) #drop empty lines
+    		{
+	    	unless ($isDuplicate)
+	    		{
+				push (@results,$change); #Keep that change			    		
+	    		}	    	
+    		}    		
+    	else
+    		{
+    		die "Could not parse: $change";	    	
+    		}	    	     		
+   		}   	
+   			
+   	return @results;
+	}	   
+	
+			
+	
 1;
